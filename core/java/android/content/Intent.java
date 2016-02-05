@@ -5350,15 +5350,13 @@ public class Intent implements Parcelable, Cloneable {
             "android.intent.action.SHOW_FOREGROUND_SERVICE_MANAGER";
 
     /**
-     * Broadcast Action: Sent to the responsible installer of an archived package when unarchival
-     * is requested.
-     *
-     * @see android.content.pm.PackageInstaller#requestUnarchive
+     * Broadcast action: notify the system that the user has performed a gesture on the screen
+     * to launch the camera. Broadcast should be protected to receivers holding the
+     * {@link Manifest.permission#STATUS_BAR_SERVICE} permission.
+     * @hide
      */
-    @FlaggedApi(android.content.pm.Flags.FLAG_ARCHIVING)
-    @BroadcastBehavior(explicitOnly = true)
-    @SdkConstant(SdkConstantType.BROADCAST_INTENT_ACTION)
-    public static final String ACTION_UNARCHIVE_PACKAGE = "android.intent.action.UNARCHIVE_PACKAGE";
+    public static final String ACTION_SCREEN_CAMERA_GESTURE =
+            "android.intent.action.SCREEN_CAMERA_GESTURE";
 
     // ---------------------------------------------------------------------
     // ---------------------------------------------------------------------
