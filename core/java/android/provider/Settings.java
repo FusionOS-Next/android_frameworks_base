@@ -11927,7 +11927,14 @@ public final class Settings {
          */
         public static final String HBM_SETTING_KEY =
                 "com.android.server.display.HBM_SETTING_KEY";
-
+                
+        /**
+         * Control whether to show the OOS QS Panel.
+         * @hide
+         */
+        @Readable
+        public static final String OOS_QS_PANEL = "oos_qs_panel";
+          
         /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.

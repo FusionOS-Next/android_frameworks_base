@@ -18,12 +18,16 @@ package com.android.systemui.statusbar;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.Notification;
+import android.content.ComponentName;
 import android.content.Context;
 import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
+import android.media.session.MediaController.TransportControls;
 import android.media.session.MediaSession;
+import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
+import android.os.UserHandle;
 import android.service.notification.NotificationStats;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
@@ -45,6 +49,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -79,6 +84,7 @@ public class NotificationMediaManager implements Dumpable {
     private MediaController mMediaController;
     private String mMediaNotificationKey;
     private MediaMetadata mMediaMetadata;
+    private final MediaSessionManager mMediaSessionManager;
 
     private final MediaController.Callback mMediaListener = new MediaController.Callback() {
         @Override
@@ -115,13 +121,16 @@ public class NotificationMediaManager implements Dumpable {
             NotifPipeline notifPipeline,
             NotifCollection notifCollection,
             MediaDataManager mediaDataManager,
-            DumpManager dumpManager) {
+            DumpManager dumpManager, 
+            MediaSessionManager mediaSessionManager){
+
         mContext = context;
         mMediaListeners = new ArrayList<>();
         mVisibilityProvider = visibilityProvider;
         mMediaDataManager = mediaDataManager;
         mNotifPipeline = notifPipeline;
         mNotifCollection = notifCollection;
+        mMediaSessionManager = mediaSessionManager
 
         setupNotifPipeline();
 
@@ -364,7 +373,7 @@ public class NotificationMediaManager implements Dumpable {
         return a.controlsSameSession(b);
     }
 
-    private int getMediaControllerPlaybackState(MediaController controller) {
+    public int getMediaControllerPlaybackState(MediaController controller) {
         if (controller != null) {
             final PlaybackState playbackState = controller.getPlaybackState();
             if (playbackState != null) {
@@ -372,6 +381,65 @@ public class NotificationMediaManager implements Dumpable {
             }
         }
         return PlaybackState.STATE_NONE;
+    }
+
+    public boolean getPlaybackStateIsEqual(int state) {
+        if (mMediaController != null) {
+            int currentState = getMediaControllerPlaybackState(mMediaController);
+            return state == currentState;
+        }
+        return false;
+    }
+
+    public void playPauseTrack() {
+        if (mMediaSessionManager != null) {
+            Iterator it = mMediaSessionManager.getActiveSessionsForUser(null, UserHandle.CURRENT).iterator();
+
+            while (it.hasNext()) {
+                MediaController mediaController = (MediaController) it.next();
+                int controllerState = getMediaControllerPlaybackState(mediaController);
+
+                if (controllerState == PlaybackState.STATE_PLAYING) {
+                    mediaController.getTransportControls().pause();
+                    return;
+                } else if (controllerState == PlaybackState.STATE_PAUSED) {
+                    mediaController.getTransportControls().play();
+                    return;
+                }
+            }
+        }
+    }
+
+    public void skipTrackNext() {
+        if (mMediaSessionManager != null) {
+            Iterator it = mMediaSessionManager.getActiveSessionsForUser(null, UserHandle.CURRENT).iterator();
+
+            while (it.hasNext()) {
+                MediaController mediaController = (MediaController) it.next();
+                int controllerState = getMediaControllerPlaybackState(mediaController);
+
+                if (controllerState == PlaybackState.STATE_PLAYING || controllerState == PlaybackState.STATE_PAUSED) {
+                    mediaController.getTransportControls().skipToNext();
+                    return;
+                }
+            }
+        }
+    }
+
+    public void skipTrackPrevious() {
+        if (mMediaSessionManager != null) {
+            Iterator it = mMediaSessionManager.getActiveSessionsForUser(null, UserHandle.CURRENT).iterator();
+
+            while (it.hasNext()) {
+                MediaController mediaController = (MediaController) it.next();
+                int controllerState = getMediaControllerPlaybackState(mediaController);
+
+                if (controllerState == PlaybackState.STATE_PLAYING || controllerState == PlaybackState.STATE_PAUSED) {
+                    mediaController.getTransportControls().skipToPrevious();
+                    return;
+                }
+            }
+        }
     }
 
     private void clearCurrentMediaNotificationSession() {
@@ -385,6 +453,11 @@ public class NotificationMediaManager implements Dumpable {
         }
         mMediaController = null;
     }
+
+    public MediaController getMediaController() {
+        return mMediaController;
+    }
+
 
     public interface MediaListener {
         /**

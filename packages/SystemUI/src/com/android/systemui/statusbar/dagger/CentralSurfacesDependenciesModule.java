@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.dagger;
 
 import android.content.Context;
+import android.media.session.MediaSessionManager;
 import android.os.RemoteException;
 import android.service.dreams.IDreamManager;
 import android.util.Log;
@@ -91,14 +92,16 @@ public interface CentralSurfacesDependenciesModule {
             NotifPipeline notifPipeline,
             NotifCollection notifCollection,
             MediaDataManager mediaDataManager,
-            DumpManager dumpManager) {
+             DumpManager dumpManager,
+             MediaSessionManager mediaSessionManager) {
         return new NotificationMediaManager(
                 context,
                 visibilityProvider,
                 notifPipeline,
                 notifCollection,
                 mediaDataManager,
-                dumpManager);
+                dumpManager,
+                mediaSessionManager);
     }
 
     /** */

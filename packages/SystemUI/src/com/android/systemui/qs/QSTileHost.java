@@ -29,6 +29,7 @@ import androidx.annotation.MainThread;
 import androidx.annotation.Nullable;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.util.fusion.QSLayoutCustomizer;
 import com.android.systemui.Dumpable;
 import com.android.systemui.ProtoDumpable;
 import com.android.systemui.dagger.SysUISingleton;
@@ -121,6 +122,7 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
     private TileLifecycleManager.Factory mTileLifeCycleManagerFactory;
 
     private final QSPipelineFlagsRepository mFeatureFlags;
+    private static boolean mIsOOSLayout;
 
     @Inject
     public QSTileHost(Context context,
@@ -160,6 +162,8 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
         mCurrentUser = userTracker.getUserId();
         mSecureSettings = secureSettings;
         mCustomTileStatePersister = customTileStatePersister;
+
+        mIsOOSLayout = QSLayoutCustomizer.isQsLayoutEnabled();
 
         mainExecutor.execute(() -> {
             // This is technically a hack to avoid circular dependency of
@@ -589,7 +593,6 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
                 }
             }
         }
-
         if (!tiles.contains("internet")) {
             if (tiles.contains("wifi")) {
                 // Replace the WiFi with Internet, and remove the Cell
@@ -602,7 +605,12 @@ public class QSTileHost implements QSHost, Tunable, PluginListener<QSFactory>, P
         } else {
             tiles.remove("wifi");
             tiles.remove("cell");
+            
+        if (mIsOOSLayout) {
+            tiles.remove("internet");
+            tiles.remove("bt");
         }
+
         return tiles;
     }
 

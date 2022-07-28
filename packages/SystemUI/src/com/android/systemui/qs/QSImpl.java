@@ -45,6 +45,7 @@ import androidx.lifecycle.LifecycleRegistry;
 
 import com.android.app.animation.Interpolators;
 import com.android.keyguard.BouncerPanelExpansionCalculator;
+import com.android.internal.util.fusion.QSLayoutCustomizer;
 import com.android.systemui.Dumpable;
 import com.android.systemui.animation.ShadeInterpolation;
 import com.android.systemui.compose.ComposeFacade;
@@ -88,6 +89,7 @@ public class QSImpl implements QS, CommandQueue.Callbacks, StatusBarStateControl
     private static final String EXTRA_EXPANDED = "expanded";
     private static final String EXTRA_LISTENING = "listening";
     private static final String EXTRA_VISIBLE = "visible";
+    private static boolean mIsOOSLayout;
 
     private final Rect mQsBounds = new Rect();
     private final SysuiStatusBarStateController mStatusBarStateController;
@@ -201,6 +203,8 @@ public class QSImpl implements QS, CommandQueue.Callbacks, StatusBarStateControl
         mFooterActionsViewModelFactory = footerActionsViewModelFactory;
         mFooterActionsViewBinder = footerActionsViewBinder;
         mListeningAndVisibilityLifecycleOwner = new ListeningAndVisibilityLifecycleOwner();
+        mSecureLockscreenQSDisabler = secureLockscreenQSDisabler;
+        mIsOOSLayout = QSLayoutCustomizer.isQsLayoutEnabled();
     }
 
     /**
@@ -518,6 +522,9 @@ public class QSImpl implements QS, CommandQueue.Callbacks, StatusBarStateControl
 
     public void setBrightnessMirrorController(
             BrightnessMirrorController brightnessMirrorController) {
+        if (mIsOOSLayout) {
+            mQuickQSPanelController.setBrightnessMirror(brightnessMirrorController);
+        }
         mQSPanelController.setBrightnessMirror(brightnessMirrorController);
     }
 
@@ -668,6 +675,9 @@ public class QSImpl implements QS, CommandQueue.Callbacks, StatusBarStateControl
         boolean fullyCollapsed = expansion == 0.0f;
         int heightDiff = getHeightDiff();
         float panelTranslationY = translationScaleY * heightDiff;
+        if (mIsOOSLayout) {
+            mHeader.setExpansion(onKeyguardAndExpanded, expansion, panelTranslationY);
+        }
 
         if (expansion < 1 && expansion > 0.99) {
             if (mQuickQSPanelController.switchTileLayout(false)) {

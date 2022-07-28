@@ -26,6 +26,7 @@ import android.view.View;
 
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.UiEventLogger;
+import com.android.internal.util.fusion.QSLayoutCustomizer;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.media.controls.ui.MediaHierarchyManager;
 import com.android.systemui.media.controls.ui.MediaHost;
@@ -60,6 +61,7 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
     private final BrightnessSliderController mBrightnessSliderController;
     private final BrightnessMirrorHandler mBrightnessMirrorHandler;
     private final StatusBarKeyguardViewManager mStatusBarKeyguardViewManager;
+    private static boolean mIsOOSLayout;
     private boolean mListening;
 
     private final boolean mSceneContainerEnabled;
@@ -101,6 +103,7 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
         mBrightnessMirrorHandler = new BrightnessMirrorHandler(mBrightnessController);
         mStatusBarKeyguardViewManager = statusBarKeyguardViewManager;
         mSceneContainerEnabled = sceneContainerFlags.isEnabled();
+        mIsOOSLayout = QSLayoutCustomizer.isQsLayoutEnabled();
     }
 
     @Override
@@ -126,6 +129,9 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
             refreshAllTiles();
         }
         switchTileLayout(true);
+        if (mIsOOSLayout) {
+            mView.updateColumns();
+        }
         mBrightnessMirrorHandler.onQsPanelAttached();
         PagedTileLayout pagedTileLayout= ((PagedTileLayout) mView.getOrCreateTileLayout());
         pagedTileLayout.setOnTouchListener(mTileLayoutTouchListener);
@@ -147,6 +153,9 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
     @Override
     protected void onConfigurationChanged() {
         mView.updateResources();
+        if (mIsOOSLayout) {
+            mView.updateColumns();
+        }
         if (mView.isListening()) {
             refreshAllTiles();
         }
@@ -170,15 +179,15 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
 
         if (listening != mListening) {
             mListening = listening;
-            // Set the listening as soon as the QS fragment starts listening regardless of the
-            //expansion, so it will update the current brightness before the slider is visible.
-            if (listening) {
-                mBrightnessController.registerCallbacks();
-            } else {
-                mBrightnessController.unregisterCallbacks();
-            }
+        // Set the listening as soon as the QS fragment starts listening regardless of the
+        //expansion, so it will update the current brightness before the slider is visible.
+        if (listening || mIsOOSLayout) {
+            mBrightnessController.registerCallbacks();
+        } else {
+            mBrightnessController.unregisterCallbacks();
         }
     }
+}
 
     public void setBrightnessMirror(BrightnessMirrorController brightnessMirrorController) {
         mBrightnessMirrorHandler.setController(brightnessMirrorController);
