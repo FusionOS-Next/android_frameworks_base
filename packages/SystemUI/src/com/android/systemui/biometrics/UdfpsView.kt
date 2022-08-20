@@ -24,6 +24,7 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
+import android.view.Surface
 import android.widget.FrameLayout
 import com.android.systemui.biometrics.shared.model.UdfpsOverlayParams
 import com.android.systemui.doze.DozeReceiver
@@ -46,6 +47,16 @@ class UdfpsView(
         color = Color.BLUE
         textSize = 32f
     }
+
+    private val sensorTouchAreaCoefficient: Float =
+        context.theme.obtainStyledAttributes(attrs, R.styleable.UdfpsView, 0, 0).use { a ->
+            require(a.hasValue(R.styleable.UdfpsView_sensorTouchAreaCoefficient)) {
+                "UdfpsView must contain sensorTouchAreaCoefficient"
+            }
+            a.getFloat(R.styleable.UdfpsView_sensorTouchAreaCoefficient, 0f)
+        }
+
+    private var ghbmView: UdfpsSurfaceView? = null
 
     /** View controller (can be different for enrollment, BiometricPrompt, Keyguard, etc.). */
     var animationViewController: UdfpsAnimationViewController<*>? = null
@@ -71,6 +82,10 @@ class UdfpsView(
     // Don't propagate any touch events to the child views.
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         return (animationViewController == null || !animationViewController!!.shouldPauseAuth())
+    }
+
+    override fun onFinishInflate() {
+        ghbmView = findViewById(R.id.hbm_view)
     }
 
     override fun dozeTimeTick() {
@@ -106,12 +121,34 @@ class UdfpsView(
     fun configureDisplay(onDisplayConfigured: Runnable) {
         isDisplayConfigured = true
         animationViewController?.onDisplayConfiguring()
-        mUdfpsDisplayMode?.enable(onDisplayConfigured)
+        val gView = ghbmView
+        if (gView != null) {
+            gView.setGhbmIlluminationListener(this::doIlluminate)
+            gView.visibility = VISIBLE
+            gView.startGhbmIllumination(onDisplayConfigured)
+        } else {
+            doIlluminate(null /* surface */, onDisplayConfigured)
+        }
+    }
+
+    private fun doIlluminate(surface: Surface?, onDisplayConfigured: Runnable?) {
+        if (ghbmView != null && surface == null) {
+            Log.e(TAG, "doIlluminate | surface must be non-null for GHBM")
+        }
+
+        mUdfpsDisplayMode?.enable {
+            onDisplayConfigured?.run()
+            ghbmView?.drawIlluminationDot(RectF(sensorRect))
+        }
     }
 
     fun unconfigureDisplay() {
         isDisplayConfigured = false
         animationViewController?.onDisplayUnconfigured()
+        ghbmView?.let { view ->
+            view.setGhbmIlluminationListener(null)
+            view.visibility = INVISIBLE
+        }
         mUdfpsDisplayMode?.disable(null /* onDisabled */)
     }
 }
